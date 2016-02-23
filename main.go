@@ -87,7 +87,7 @@ func parseData() []byte {
 		log.Fatalln(err)
 	}
 
-	return readResponce(response.Body)
+	return readResponse(response.Body)
 }
 
 func descriptionDecoder(data []byte) *xml.Decoder {
@@ -99,7 +99,7 @@ func descriptionDecoder(data []byte) *xml.Decoder {
 	return decoder
 }
 
-func readResponce(response_body io.Reader) []byte {
+func readResponse(response_body io.Reader) []byte {
 	body, err := ioutil.ReadAll(response_body)
 
 	if err != nil {
