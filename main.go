@@ -1,116 +1,36 @@
 package main
 
 import (
-	"bytes"
-	"encoding/xml"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
+	"flag"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"nbgcurr/nbg"
+	"os"
+	"time"
 )
 
-type Channel struct {
-	XMLName xml.Name `xml:"rss"`
-	Title   string   `xml:"channel>title"`
-	Link    string   `xml:"channel>link"`
-	Item    Item     `xml:"channel>item"`
-}
+var currencyCode, publishDate string
 
-type Item struct {
-	Title       string `xml:"title"`
-	Link        string `xml:"link"`
-	Description string `xml:"description"`
-	PubDate     string `xml:"pubDate"`
-	Guid        string `xml:"guid"`
-}
+func init() {
+	now := time.Now().Format("2006-01-02")
 
-type Table struct {
-	Rows []Row `xml:"tr"`
+	flag.StringVar(&currencyCode, "code", "", "provide currency code")
+	flag.StringVar(&publishDate, "date", now, "provide publish date")
+	flag.Parse()
 }
-
-type Row struct {
-	Cols []string `xml:"td"`
-}
-
-type Currency struct {
-	Name        string
-	Description string
-	Rate        string
-	Img         string
-	Index       string
-}
-
-const (
-	NBG_URL string = "http://www.nbg.ge/rss.php"
-)
 
 func main() {
-	data := parseData()
+	params := nbg.NewRequestParams(currencyCode, publishDate)
 
-	channel := Channel{}
-	unmarshalXml([]byte(data), &channel)
+	rates := nbg.FetchRates(params)
 
-	table := Table{}
-	dec := descriptionDecoder([]byte(channel.Item.Description))
+	t := table.NewWriter()
 
-	if err := dec.Decode(&table); err != nil {
-		log.Fatalln(err)
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Code", "Name", "Rate", "Date"})
+
+	for _, c := range rates {
+		t.AppendRow([]interface{}{c.Code, c.Name, c.Rate, publishDate})
 	}
 
-	currency := currencyWrapper(&table)
-
-	for _, value := range currency {
-		fmt.Println(value.Name, value.Description, value.Rate, value.Img, value.Index)
-	}
-}
-
-func currencyWrapper(table *Table) []Currency {
-	currency := []Currency{}
-
-	for _, value := range table.Rows {
-		cols := value.Cols
-
-		new_currency := Currency{cols[0], cols[1], cols[2], cols[3], cols[4]}
-		currency = append(currency, new_currency)
-	}
-
-	return currency
-}
-
-func parseData() []byte {
-	response, err := http.Get(NBG_URL)
-
-	defer response.Body.Close()
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	return readResponse(response.Body)
-}
-
-func descriptionDecoder(data []byte) *xml.Decoder {
-	decoder := xml.NewDecoder(bytes.NewReader(data))
-	decoder.Strict = false
-	decoder.AutoClose = xml.HTMLAutoClose
-	decoder.Entity = xml.HTMLEntity
-
-	return decoder
-}
-
-func readResponse(response_body io.Reader) []byte {
-	body, err := ioutil.ReadAll(response_body)
-
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	return body
-}
-
-func unmarshalXml(data []byte, value interface{}) {
-	if err := xml.Unmarshal(data, value); err != nil {
-		log.Fatalln(err)
-	}
+	t.Render()
 }
