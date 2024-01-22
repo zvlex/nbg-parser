@@ -14,7 +14,7 @@ func fetchCurrencyRates(currentDate string) *Exchange {
 	resp, err := http.Get(NBG_URL + "?date=" + currentDate)
 
 	if err != nil {
-		fmt.Println("Error")
+		fmt.Println("Error", err)
 		os.Exit(1)
 	}
 
@@ -23,7 +23,7 @@ func fetchCurrencyRates(currentDate string) *Exchange {
 	body, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		fmt.Println("Error")
+		fmt.Println("Error:", err)
 		os.Exit(1)
 	}
 

@@ -26,11 +26,26 @@ func main() {
 	t := table.NewWriter()
 
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Code", "Name", "Rate", "Date"})
+
+	t.AppendHeader(table.Row{"Code", "Name", "Rate", "Date", "Position"})
+
+	t.SortBy([]table.SortBy{
+		{Name: "Position", Mode: table.AscNumeric},
+		{Name: "Code", Mode: table.Asc},
+	})
+
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{
+			Name:   "Position",
+			Hidden: true,
+		},
+	})
 
 	for _, c := range rates {
-		t.AppendRow([]interface{}{c.Code, c.Name, c.Rate, publishDate})
+		c.SetPosition()
+		t.AppendRow([]interface{}{c.Code, c.Name, c.Rate, publishDate, c.Position})
 	}
 
+	t.SetAutoIndex(true)
 	t.Render()
 }
